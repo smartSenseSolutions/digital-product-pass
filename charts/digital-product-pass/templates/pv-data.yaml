@@ -22,17 +22,19 @@
 # SPDX-License-Identifier: Apache-2.0
 #################################################################################
 
-kind: PersistentVolumeClaim
 apiVersion: v1
+kind: PersistentVolume
 metadata:
-  name: {{ .Release.Name }}-pvc-data
-  labels:
-    {{- include "chart.labels" . | nindent 4 }}
-  namespace: {{ .Values.namespace }}
+  name: pv-data
+  namespace: default
 spec:
-  storageClassName: standard
+  capacity:
+    storage: 5Gi
   accessModes:
     - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
+  storageClassName: standard
+  claimRef:
+    name: {{ .Release.Name }}-pvc-data
+    namespace: {{ .Values.namespace }}
+  hostPath:
+    path: "/mnt"
