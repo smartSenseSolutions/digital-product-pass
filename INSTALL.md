@@ -52,12 +52,6 @@ The documentation of the backend configuration is available here [README.md](./d
 
 ### Deployment
 
-Before the application is deployed, the persistance is necessary and must be existed. 
-
-```bash
-# Launch persistent volume
-kubectl apply -f ./deployment/local/storage/pv-data.yaml
-``` 
 Use the following command to install the application as configured helm deployment:
 
 ```bash
@@ -93,7 +87,7 @@ Copy the pod name with the prefix `dpp-backend`
 
 Paste the pod name after the `port-forward` parameter. 
 ```bash
-kubectl -port-forward dpp-backend-95b5d4989-xvbkq 8888:8888 -n default
+kubectl port-forward dpp-backend-95b5d4989-xvbkq 8888:8888 -n default
 ```
 
 > **NOTE**: The default port set is `8888` however it can be changed in the configuration.
