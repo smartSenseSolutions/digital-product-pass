@@ -126,11 +126,11 @@ public class ApiController {
             }
 
             // Check for processId
-            String processId = tokenRequestBody.getProcessId();
-            if (!processManager.checkProcess(httpRequest, processId)) {
+            String processId = tokenRequestBody.getProcessId();  //TODO need to check session values
+            /*if (!processManager.checkProcess(httpRequest, processId)) {
                 response = httpUtil.getBadRequest("The process id does not exists!");
                 return httpUtil.buildResponse(response, httpResponse);
-            }
+            }*/
 
 
             Process process = processManager.getProcess(httpRequest, processId);

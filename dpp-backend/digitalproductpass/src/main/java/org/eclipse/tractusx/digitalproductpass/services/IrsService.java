@@ -185,7 +185,7 @@ public class IrsService extends BaseService {
             body.setKey(globalAssetId, bpn);
             HttpHeaders headers = httpUtil.getHeadersWithToken(this.authService.getToken().getAccessToken());
             headers.add("Content-Type", "application/json");
-
+            headers.add("X-API-KEY", "password");
             ResponseEntity<?> response = httpUtil.doPost(url, JsonNode.class, headers, httpUtil.getParams(), body, false, false);
             JsonNode result = (JsonNode) response.getBody();
             return (Map<String, String>) jsonUtil.bindJsonNode(result, Map.class);

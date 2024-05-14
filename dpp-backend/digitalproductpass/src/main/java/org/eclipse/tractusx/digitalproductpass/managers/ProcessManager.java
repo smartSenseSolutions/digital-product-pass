@@ -30,6 +30,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.servlet.http.HttpServletRequest;
 import org.eclipse.tractusx.digitalproductpass.config.ProcessConfig;
+import org.eclipse.tractusx.digitalproductpass.exceptions.DataModelException;
 import org.eclipse.tractusx.digitalproductpass.exceptions.ManagerException;
 import org.eclipse.tractusx.digitalproductpass.models.catenax.Dtr;
 import org.eclipse.tractusx.digitalproductpass.models.dtregistry.DigitalTwin;
@@ -49,7 +50,9 @@ import org.springframework.stereotype.Component;
 import utils.*;
 
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This class consists exclusively of methods to operate on managing the Processes.
@@ -74,6 +77,8 @@ public class ProcessManager {
     private final String digitalTwinFileName = "digitalTwin";
     private final String passportFileName = "passport";
     private final String searchFileName = "search";
+
+    public static final Map<String, Process> PROCESS_MAP = new ConcurrentHashMap<>();
 
     /** CONSTRUCTOR(S) **/
     @Autowired
@@ -147,8 +152,9 @@ public class ProcessManager {
     public Process getProcess(HttpServletRequest httpRequest, String processId) {
         try {
             // Getting a process
-            ProcessDataModel dataModel = this.loadDataModel(httpRequest);
-            return dataModel.getProcess(processId);
+
+            Process process = PROCESS_MAP.get(processId);
+            return process;
         } catch (Exception e) {
             throw new ManagerException(this.getClass().getName(), e, "It was not possible to get process [" + processId + "]");
         }
@@ -184,6 +190,10 @@ public class ProcessManager {
         return CrypUtil.sha256("signToken=[" + process.getCreated() + "|" + process.id + "|" + contractId + "|" + processConfig.getSignToken() + "]"); // Add extra level of security, that just the user that has this token can sign
     }
 
+    public String generateToken(String processId,long creayedAt,  String contractId) {
+        return CrypUtil.sha256("signToken=[" +creayedAt + "|" + processId + "|" + contractId + "|" + processConfig.getSignToken() + "]"); // Add extra level of security, that just the user that has this token can sign
+    }
+
     /**
      * Checks if a Process with the given processId in the given HTTP session exists.
      * <p>
@@ -199,9 +209,7 @@ public class ProcessManager {
      */
     public Boolean checkProcess(HttpServletRequest httpRequest, String processId) {
         try {
-            // Getting a process
-            ProcessDataModel dataModel = this.loadDataModel(httpRequest);
-            return dataModel.processExists(processId);
+            return PROCESS_MAP.containsKey(processId);
         } catch (Exception e) {
             throw new ManagerException(this.getClass().getName(), e, "It was not possible to check if process exists [" + processId + "]");
         }
@@ -245,11 +253,17 @@ public class ProcessManager {
      */
     public void startNegotiation(HttpServletRequest httpRequest, String processId, Runnable contractNegotiation) {
         try {
-            // Start the negotiation
-            ProcessDataModel dataModel = this.loadDataModel(httpRequest);
-            dataModel.startProcess(processId, contractNegotiation);
-        } catch (Exception e) {
-            throw new ManagerException(this.getClass().getName(), e, "It was not possible to start negotiation for [" + processId + "]");
+            Process process = ProcessManager.PROCESS_MAP.get(processId);
+            if (process == null) {
+                throw new DataModelException(this.getClass().getName(), "The process does not exists!");
+            }
+            process.state = "RUNNING";
+            process.thread = ThreadUtil.runThread(contractNegotiation, processId);
+            process.updated = DateTimeUtil.getTimestamp();
+            ProcessManager.PROCESS_MAP.put(processId, process);
+
+        }catch (Exception e){
+            throw new DataModelException(this.getClass().getName(), e, "It was not possible to start the process");
         }
     }
 
@@ -266,8 +280,7 @@ public class ProcessManager {
      */
     public void setProcess(HttpServletRequest httpRequest, Process process) {
         try { // Setting and updating a process
-            ProcessDataModel dataModel = this.loadDataModel(httpRequest);
-            dataModel.addProcess(process);
+            ProcessManager.PROCESS_MAP.put(process.getId(), process);
         } catch (Exception e) {
             throw new ManagerException(this.getClass().getName(), e, "It was not possible to set process [" + process.id + "]");
         }
@@ -287,12 +300,9 @@ public class ProcessManager {
      *           if unable to set the process state.
      */
     public void setProcessState(HttpServletRequest httpRequest, String processId, String processState) {
-        try { // Setting and updating a process state
-            ProcessDataModel dataModel = (ProcessDataModel) httpUtil.getSessionValue(httpRequest, this.processDataModelName);
-            dataModel.setState(processId, processState);
-        } catch (Exception e) {
-            throw new ManagerException(this.getClass().getName(), e, "It was not possible to set process state [" + processState + "] for process [" + processId + "]");
-        }
+        Process process = PROCESS_MAP.get(processId);
+        process.setState(processState);
+        PROCESS_MAP.put(processId, process);
     }
 
     /**
@@ -311,8 +321,8 @@ public class ProcessManager {
     @SuppressWarnings("Unused")
     public String getProcessState(HttpServletRequest httpRequest, String processId) {
         try { // Setting and updating a process state
-            ProcessDataModel dataModel = (ProcessDataModel) httpUtil.getSessionValue(httpRequest, this.processDataModelName);
-            return dataModel.getState(processId);
+            Process process = PROCESS_MAP.get(processId);
+            return process.getState();
         } catch (Exception e) {
             throw new ManagerException(this.getClass().getName(), e, "It was not possible to get process state for process [" + processId + "]");
         }
@@ -373,6 +383,7 @@ public class ProcessManager {
     public Process createProcess(HttpServletRequest httpRequest, String connectorAddress) {
         Long createdTime = DateTimeUtil.getTimestamp();
         Process process = new Process(CrypUtil.getUUID(), "CREATED", createdTime);
+        this.PROCESS_MAP.put(process.getId(), process);
         LogUtil.printMessage("Process Created [" + process.id + "], waiting for user to sign or decline...");
         this.setProcess(httpRequest, process); // Add process to session storage
         this.newStatusFile(process.id, connectorAddress, createdTime, true); // Set the status from the process in file system logs.
@@ -497,6 +508,7 @@ public class ProcessManager {
     public Process createProcess(String processId, HttpServletRequest httpRequest) {
         Long createdTime = DateTimeUtil.getTimestamp();
         Process process = new Process(processId, "CREATED", createdTime);
+        this.PROCESS_MAP.put(process.getId(), process);
         LogUtil.printMessage("Process Created [" + process.id + "], waiting for user to sign or decline...");
         this.setProcess(httpRequest, process); // Add process to session storage
         this.newStatusFile(process.id,"", createdTime, true); // Set the status from the process in file system logs.
@@ -520,6 +532,7 @@ public class ProcessManager {
     public Process createProcess(String processId,Boolean childrenCondition, HttpServletRequest httpRequest) {
         Long createdTime = DateTimeUtil.getTimestamp();
         Process process = new Process(processId, "CREATED", createdTime);
+        this.PROCESS_MAP.put(process.getId(), process);
         LogUtil.printMessage("Process Created [" + process.id + "], waiting for user to sign or decline...");
         this.setProcess(httpRequest, process); // Add process to session storage
         this.newStatusFile(process.id,"", createdTime, childrenCondition); // Set the status from the process in file system logs.
@@ -739,12 +752,12 @@ public class ProcessManager {
     }
 
     /**
-     * Adds the job history in the status file 
+     * Adds the job history in the status file
      * <p>
      * @param   processId
      *          the {@code String} id of the application's process.
      * @param   jobHistory
-     *          the {@code JobHistory} job history from the irs 
+     *          the {@code JobHistory} job history from the irs
      *
      * @return  a {@code String} file path of the process status file.
      *
