@@ -54,7 +54,7 @@ configuration:
     catalog: '/catalog/request'
     negotiation: '/contractnegotiations'
     transfer: '/transferprocesses'
-    receiverEndpoint: 'https://b26c-203-129-213-107.ngrok-free.app/endpoint'
+    receiverEndpoint: 'https://8a38-203-129-213-99.ngrok-free.app/endpoint'
     delay:  100 # -- Negotiation status Delay in milliseconds in between async requests [<= 500]
     transferType: "application/octet-stream"
     timeout:
@@ -70,13 +70,13 @@ configuration:
 
   irs:
     enabled: true
-    endpoint: "http://localhost:8080"
+    endpoint: "http://localhost:8090"
     paths:
       job: "irs/jobs"
     tree:
       fileName: "treeDataModel"
       indent: true
-    callbackUrl: "http://localhost:8080/api/irs"
+    callbackUrl: "https://8a38-203-129-213-99.ngrok-free.app/api/irs"
 
   dtr:
     assetPropType: 'asset:prop:type'

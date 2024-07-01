@@ -266,7 +266,7 @@ public class DtrSearchManager {
             }
             return;
         }
-        List<Dataset> contractOfferList = (List<Dataset>) jsonUtil.bindObject(contractOffers, List.class);
+        List<Dataset> contractOfferList = (List<Dataset>) jsonUtil.bindReferenceType(contractOffers, new TypeReference<List<Dataset>>() {});
         if (contractOfferList.isEmpty()) {
             return;
         }
