@@ -29,12 +29,13 @@ metadata:
   namespace: default
 spec:
   capacity:
-    storage: 5Gi
+    storage: 6Gi
   accessModes:
     - ReadWriteOnce
-  storageClassName: standard
+  storageClassName: local-storage
   claimRef:
     name: {{ .Release.Name }}-pvc-data
-    namespace: {{ .Values.namespace }}
+    namespace: tractusx
   hostPath:
-    path: "/mnt"
+    path: "/data/dpp"
+    type: DirectoryOrCreate
