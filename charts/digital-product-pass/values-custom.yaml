@@ -44,7 +44,7 @@ backend:
     hostname: "discoveryfinder.cx.the-sense.io"
     bpnDiscovery:
       key: "manufacturerPartId"
-      path: "/api/v1.0/administration/connectors/bpnDiscovery/search"
+      path: "/search"
     edcDiscovery:
       key: "edc"
 
