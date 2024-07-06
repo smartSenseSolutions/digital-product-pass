@@ -87,7 +87,7 @@ oauth:
   # -- note: this credentials need to have access to the Discovery Finder, BPN Discovery and EDC Discovery
   techUser:
     clientId: "<path:dpp/data/oauth#client_id>"
-    clientSecret: "<path:dpp/data/oauth#client_id>"
+    clientSecret: "<path:dpp/data/oauth#client_secret>"
   realm: "CX-Central"
   appId: "Cl13-CX-Battery"
   onLoad: "login-required"
