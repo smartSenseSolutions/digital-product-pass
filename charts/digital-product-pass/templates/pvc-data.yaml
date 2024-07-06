@@ -30,7 +30,7 @@ metadata:
     {{- include "chart.labels" . | nindent 4 }}
   namespace: {{ .Values.namespace }}
 spec:
-  storageClassName: standard
+  storageClassName: local-storage
   accessModes:
     - ReadWriteOnce
   resources:
