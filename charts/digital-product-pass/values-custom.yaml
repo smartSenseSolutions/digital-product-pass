@@ -1,0 +1,93 @@
+
+name: "digital-product-pass"
+replicaCount: 1
+
+# -- Backend configuration
+backend:
+  name: "dpp-backend"
+  image:
+    repository: ghcr.io/smartsensesolutions/digital-product-pass
+    pullPolicy: IfNotPresent
+    tag: backend-fix
+
+  # -- ingress declaration to expose the dpp-backend service
+  ingress:
+    enabled: true
+    annotations:
+      ingressClassName: nginx
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: "dpp-backend.cx.the-sense.io"
+        paths:
+          - path: /
+            pathType: Prefix
+
+  # -- in this section we configure the values that are inserted as secrets in the backend
+  edc:
+    # -- the secret for assesing the edc management API
+    xApiKey: "<path:dpp/data/api-key#x-api-key>"
+    participantId: &bpn "BPNL0000000007UH"
+    hostname: "edc-controlplane.smartsense.the-sense.io"
+
+  hostname: dpp-backend.cx.the-sense.io
+
+  irs:
+    enabled: true
+    hostname: "irs.cx.the-sense.io"
+
+  # -- digital twin registry configuration
+  process:
+    # -- unique sha512 hash key used for the passport encryption
+    encryptionKey: "c55e3f35200f6afedbce37cefdaf40eadd15c92814edfdbc4d6ab0eacdcdd56dbcd5a2a34ca4b675084d33f9f479d7d79347795148aaf4443e1b47ab96b27e72"
+
+  # -- discovery configuration
+  discovery:
+    hostname: "discoveryfinder.cx.the-sense.io"
+    bpnDiscovery:
+      key: "manufacturerPartId"
+      path: "/api/v1.0/administration/connectors/bpnDiscovery/search"
+    edcDiscovery:
+      key: "edc"
+
+frontend:
+  name: "dpp-frontend"
+  image:
+    repository: ghcr.io/smartsensesolutions/digital-product-pass
+    pullPolicy: IfNotPresent
+    tag: frontend-fix
+
+  # -- ingress declaration to expose the dpp-frontend service
+  ingress:
+    enabled: true
+    annotations:
+      ingressClassName: nginx
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: "dpp.cx.the-sense.io"
+        paths:
+          - path: /
+            pathType: Prefix
+
+  # -- url of the digital product pass backend service
+  backend:
+    hostname: "dpp-backend.cx.the-sense.io"
+
+  portal:
+    hostname: "portal.cx.the-sense.io"
+
+  negotiation:
+    autoSign: true
+
+
+# -- oauth configuration
+oauth:
+  # -- url of the identity provider service
+  hostname: "centralidp.cx.the-sense.io"
+  # -- technical user keycloak central id credentials
+  # -- note: this credentials need to have access to the Discovery Finder, BPN Discovery and EDC Discovery
+  techUser:
+    clientId: "<path:dpp/data/oauth#client_id>"
+    clientSecret: "<path:dpp/data/oauth#client_id>"
+  realm: "CX-Central"
+  appId: "Cl13-CX-Battery"
+  onLoad: "login-required"
