@@ -29,11 +29,11 @@ import numberUtil from "@/utils/numberUtil";
 const VERSION = "APP_VERSION";
 
 // Mandatory URLs
-const IDP_URL = "IDENTITY_PROVIDER_URL";
+const IDP_URL = "https://centralidp.cx.the-sense.io/auth/";
 
 // Get urls that can be empty
-let serverUrl = "HOST_URL";
-let backendUrl = "DATA_URL";
+let serverUrl = "http://localhost:8880";
+let backendUrl = "http://localhost:8880";
 let retries = 'APP_API_MAX_RETRIES';
 let searchTimeout = 'API_SEARCH_TIMEOUT';
 let negotiateTimeout = 'API_NEGOTIATE_TIMEOUT';
@@ -41,9 +41,9 @@ let declineTimeout = 'API_DECLINE_TIMEOUT';
 let irsDelay = 'APP_IRS_DELAY';
 let irsMaxWaitingTime = 'APP_IRS_WAITING_TIME'; 
 let delay = 'APP_API_DELAY';
-let clientId = "KEYCLOAK_CLIENTID";
-let realm = "KEYCLOAK_REALM";
-let onLoad = "KEYCLOAK_ONLOAD";
+let clientId = "dpp_fronted";
+let realm = "CX-Central";
+let onLoad = "login-required";
 let commitId = "REPO_COMMIT_ID";
 let repoEndpoint = "REPO_ENDPOINT_URL";
 let roleCheck = "AUTH_ROLE_CHECK";

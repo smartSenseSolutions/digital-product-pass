@@ -30,6 +30,7 @@ import org.eclipse.tractusx.digitalproductpass.models.dtregistry.DigitalTwin;
 import org.springframework.core.env.Environment;
 import utils.exceptions.UtilException;
 
+import java.net.MalformedURLException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -88,7 +89,11 @@ public final class CatenaXUtil {
      *
      */
     public static String buildDataEndpoint(String endpoint) {
-        return endpoint + edcDataEndpoint;
+        try {
+            return HttpUtil.cleanUrl(endpoint) + edcDataEndpoint;
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**

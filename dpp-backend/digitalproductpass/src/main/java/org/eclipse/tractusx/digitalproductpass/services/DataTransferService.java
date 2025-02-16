@@ -40,6 +40,7 @@ import org.eclipse.tractusx.digitalproductpass.models.edc.CheckResult;
 import org.eclipse.tractusx.digitalproductpass.models.http.requests.Search;
 import org.eclipse.tractusx.digitalproductpass.models.http.responses.IdResponse;
 import org.eclipse.tractusx.digitalproductpass.models.manager.History;
+import org.eclipse.tractusx.digitalproductpass.models.manager.Process;
 import org.eclipse.tractusx.digitalproductpass.models.manager.Status;
 import org.eclipse.tractusx.digitalproductpass.models.negotiation.*;
 import org.eclipse.tractusx.digitalproductpass.models.negotiation.Set;
@@ -192,7 +193,7 @@ public class DataTransferService extends BaseService {
      */
     public String getEdcConnectorBpn() throws ServiceException {
         try {
-            String edcConsumerDsp = this.edcEndpoint + CatenaXUtil.edcDataEndpoint;
+            String edcConsumerDsp = CatenaXUtil.buildEndpoint(this.edcEndpoint);
             Catalog catalog = this.getContractOfferCatalog(edcConsumerDsp, ""); // Get empty catalog
             if (catalog == null || catalog.getParticipantId().isEmpty()) {
                 throw new ControllerException(this.getClass().getName()+".checkEdcConsumerConnection", "The catalog response is null or the participant id is not set!");
@@ -677,14 +678,14 @@ public class DataTransferService extends BaseService {
      * @throws  ServiceException
      *           if unable to process the exchange of the negotiation or the transfer
      */
-    public JsonNode processExchange(String url, String id, String processId, ProcessDataModel dataModel, List<String> completedStates) throws ServiceException {
+    public JsonNode processExchange(String url, String id, String processId, Process process, List<String> completedStates) throws ServiceException {
         // Initialize variables
         String actualState = "", state = "";
         boolean success;
         Instant start = Instant.now(), end = start;
         NegotiationTransferResponse body = null;
 
-        // Initialize headers for the request
+        // Initialize headers for the request2
         HttpHeaders headers = httpUtil.getHeaders();
         headers.add("Content-Type", "application/json");
         headers.add("X-Api-Key", this.apiKey);
@@ -724,7 +725,7 @@ public class DataTransferService extends BaseService {
             }
 
             // If the user calls the cancel api the negotiation/transfer will be terminated
-            if (dataModel != null && processId != null && dataModel.getState(processId).equals("TERMINATED")) {
+            if (process != null && processId != null && process.getState().equals("TERMINATED")) {
                 LogUtil.printStatus("[" + id + "] The contract exchange was cancelled!");
                 return null;
             }
@@ -757,7 +758,7 @@ public class DataTransferService extends BaseService {
      * @throws  ServiceException
      *           if unable to see the negotiation.
      */
-    public Negotiation seeNegotiation(String id, String processId, ProcessDataModel dataModel) {
+    public Negotiation seeNegotiation(String id, String processId, Process process) {
         try {
             this.checkEmptyVariables();
 
@@ -765,7 +766,7 @@ public class DataTransferService extends BaseService {
             // Get variables from configuration
             String url = endpoint + "/" + id;
             // Do the process exchange
-            JsonNode response = this.processExchange(url, id, processId, dataModel, this.successStates);
+            JsonNode response = this.processExchange(url, id, processId, process, this.successStates);
             if(response == null) {
                 return null;
             }
@@ -864,13 +865,13 @@ public class DataTransferService extends BaseService {
      * @throws  ServiceException
      *           if unable to get the transfer data.
      */
-    public Transfer seeTransfer(String id, String processId, ProcessDataModel dataModel) {
+    public Transfer seeTransfer(String id, String processId, Process process) {
         try {
             this.checkEmptyVariables();
             String endpoint = CatenaXUtil.buildManagementEndpoint(env, this.transferPath);
             String url = endpoint + "/" + id;
             // Do the process exchange
-            JsonNode response = this.processExchange(url, id, processId, dataModel, this.transferSuccessStates);
+            JsonNode response = this.processExchange(url, id, processId, process, this.transferSuccessStates);
             if(response == null) {
                 return null;
             }
@@ -946,7 +947,7 @@ public class DataTransferService extends BaseService {
 
         /** ATTRIBUTES **/
         private NegotiationRequest negotiationRequest;
-        private ProcessDataModel dataModel;
+        private Process process;
         private Dataset dataset;
         private Negotiation negotiation;
         private Transfer transfer;
@@ -962,8 +963,8 @@ public class DataTransferService extends BaseService {
 
         /** CONSTRUCTOR(S) **/
         public NegotiateContract() {};
-        public NegotiateContract(ProcessDataModel dataModel, String processId, String bpn, String providerBpn, Dataset dataset, Status status) {
-            this.dataModel = dataModel;
+        public NegotiateContract(Process process, String processId, String bpn, String providerBpn, Dataset dataset, Status status) {
+            this.process = process;
             this.processId = processId;
             this.dataset = dataset;
             this.status = status;
@@ -972,8 +973,8 @@ public class DataTransferService extends BaseService {
             this.negotiationRequest = buildRequest(dataset, status, bpn, providerBpn);
         }
         // Negotiate contract with policy
-        public NegotiateContract(ProcessDataModel dataModel, String processId, String bpn, String providerBpn, Dataset dataset, Status status, Set policy) {
-            this.dataModel = dataModel;
+        public NegotiateContract(Process process, String processId, String bpn, String providerBpn, Dataset dataset, Status status, Set policy) {
+            this.process = process;
             this.processId = processId;
             this.dataset = dataset;
             this.status = status;
@@ -981,31 +982,7 @@ public class DataTransferService extends BaseService {
             this.negotiationRequest = buildRequest(dataset, status, bpn, providerBpn, policy);
         }
         // Start the negotiation and build contract by policy id
-        public NegotiateContract(ProcessDataModel dataModel, String processId, String bpn, String providerBpn, Dataset dataset, Status status, String policyId) {
-            this.dataModel = dataModel;
-            this.processId = processId;
-            this.dataset = dataset;
-            this.status = status;
-            this.bpn = bpn;
-            this.negotiationRequest = buildRequestById(dataset, status, bpn, providerBpn, policyId);
-        }
 
-        public NegotiateContract(NegotiationRequest negotiationRequest, ProcessDataModel dataModel, Dataset dataset, Negotiation negotiation, Transfer transfer, TransferRequest transferRequest, IdResponse negotiationResponse, IdResponse tranferResponse, Integer negotiationAttempts, Integer transferAttempts, Status status, String bpn, String processId, String providerBpn) {
-            this.negotiationRequest = negotiationRequest;
-            this.dataModel = dataModel;
-            this.dataset = dataset;
-            this.negotiation = negotiation;
-            this.transfer = transfer;
-            this.transferRequest = transferRequest;
-            this.negotiationResponse = negotiationResponse;
-            this.tranferResponse = tranferResponse;
-            this.negotiationAttempts = negotiationAttempts;
-            this.transferAttempts = transferAttempts;
-            this.status = status;
-            this.bpn = bpn;
-            this.processId = processId;
-            this.providerBpn = providerBpn;
-        }
 
         /** GETTERS AND SETTERS **/
         @SuppressWarnings("Unused")
@@ -1034,15 +1011,7 @@ public class DataTransferService extends BaseService {
             return negotiationRequest;
         }
 
-        @SuppressWarnings("Unused")
-        public ProcessDataModel getDataModel() {
-            return dataModel;
-        }
 
-        @SuppressWarnings("Unused")
-        public void setDataModel(ProcessDataModel dataModel) {
-            this.dataModel = dataModel;
-        }
 
         @SuppressWarnings("Unused")
         public Integer getNegotiationAttempts() {
@@ -1183,6 +1152,8 @@ public class DataTransferService extends BaseService {
         public void run() {
             // NEGOTIATION PROCESS
             try {
+               // String io = negotiationRequest.getConnectorAddress().replaceAll("io", "io/");
+                negotiationRequest.setConnectorAddress(negotiationRequest.getConnectorAddress());
                 processManager.saveNegotiationRequest(processId, negotiationRequest, new IdResponse(processId, null), false);
                 this.negotiationResponse = this.requestNegotiation(this.negotiationRequest);
                 processManager.saveNegotiationRequest(processId, negotiationRequest, negotiationResponse, false);
@@ -1200,20 +1171,24 @@ public class DataTransferService extends BaseService {
                         this.processId,
                         "FAILED"
                 ));
-                this.dataModel.setState(processId, "FAILED");
+                Process process1 = ProcessManager.PROCESS_MAP.get(processId);
+                process1.setState("FAILED");
+                ProcessManager.PROCESS_MAP.put(processId, process1);
                 throw new ServiceException(this.getClass().getName(), e, "Failed to do the contract negotiation!");
             }
 
-            if (this.dataModel.getState(processId).equals("TERMINATED")) {
+            if (this.process.getState().equals("TERMINATED")) {
                 LogUtil.printMessage("Terminated process " + processId + " transfer terminated!");
                 return;
             }
-            ;
-            this.dataModel.setState(processId, "NEGOTIATED");
+            Process process1 = ProcessManager.PROCESS_MAP.get(processId);
+            process1.setState("NEGOTIATED");
+            ProcessManager.PROCESS_MAP.put(processId, process1);
             LogUtil.printStatus("[PROCESS " + this.processId + "] Negotiation Finished with status [" + negotiation.getState() + "]!");
             // TRANSFER PROCESS
             try {
                 this.transferRequest = buildTransferRequest(this.dataset, this.status, this.negotiation, this.bpn);
+                transferRequest.setConnectorAddress(transferRequest.getConnectorAddress());
                 processManager.saveTransferRequest(this.processId, transferRequest, new IdResponse(processId, null), false);
                 this.tranferResponse = this.requestTransfer(transferRequest);
                 processManager.saveTransferRequest(this.processId, transferRequest, this.tranferResponse, false);
@@ -1230,10 +1205,16 @@ public class DataTransferService extends BaseService {
                         processId,
                         "FAILED"
                 ));
-                this.dataModel.setState(processId, "FAILED");
+
+                process1 = ProcessManager.PROCESS_MAP.get(processId);
+                process1.setState("FAILED");
+                ProcessManager.PROCESS_MAP.put(processId, process1);
                 throw new ServiceException(this.getClass().getName(), e, "Failed to do the contract transfer");
             }
-            this.dataModel.setState(processId, "COMPLETED");
+
+            process1 = ProcessManager.PROCESS_MAP.get(processId);
+            process1.setState("COMPLETED");
+            ProcessManager.PROCESS_MAP.put(processId, process1);
             LogUtil.printStatus("[PROCESS " + this.processId + "] Negotiation and Transfer Completed!");
         }
 
@@ -1251,7 +1232,7 @@ public class DataTransferService extends BaseService {
         public Negotiation getNegotiationData(IdResponse negotiationResponse) {
             Negotiation negotiation = null;
             try {
-                negotiation = seeNegotiation(negotiationResponse.getId(), this.processId, this.dataModel);
+                negotiation = seeNegotiation(negotiationResponse.getId(), this.processId, ProcessManager.PROCESS_MAP.get(this.processId));
             } catch (Exception e) {
                 throw new ServiceException(this.getClass().getName(), e, "Failed to get the negotiation [" + negotiationResponse.getId() + "]");
             }
@@ -1325,7 +1306,7 @@ public class DataTransferService extends BaseService {
             // Check for transfer updates and the status
             Transfer transfer = null;
             try {
-                transfer = seeTransfer(transferResponse.getId(), this.processId, this.dataModel);
+                transfer = seeTransfer(transferResponse.getId(), this.processId, ProcessManager.PROCESS_MAP.get(this.processId));
             } catch (Exception e) {
                 throw new ServiceException(this.getClass().getName(), e, "Failed to get the transfer data [" + transferResponse.getId() + "]");
             }

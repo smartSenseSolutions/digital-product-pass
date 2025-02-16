@@ -50,36 +50,16 @@ public class NegotiationRequest extends DidDocument{
     @JsonProperty("offer")
     Offer offer;
 
-    /** CONSTRUCTOR(S) **/
-    @SuppressWarnings("Unused")
-    public NegotiationRequest(JsonNode context, String connectorAddress, String protocol, String connectorId, String providerId, Offer offer) {
-        this.context = context;
-        this.type = "NegotiationInitiateRequestDto";
-        this.connectorAddress = connectorAddress;
-        this.protocol = protocol;
-        this.connectorId = connectorId;
-        this.providerId = providerId;
-        this.offer = offer;
-    }
     public NegotiationRequest(JsonNode context, String connectorAddress, String connectorId, String providerId, Offer offer) {
         this.context = context;
-        this.type = "NegotiationInitiateRequestDto";
+        this.type = "ContractRequest";
         this.connectorAddress = connectorAddress;
         this.protocol = "dataspace-protocol-http";
         this.connectorId = connectorId;
         this.providerId = providerId;
         this.offer = offer;
     }
-    @SuppressWarnings("Unused")
-    public NegotiationRequest(JsonNode context, String type, String connectorAddress, String protocol, String connectorId, String providerId, Offer offer) {
-        this.context = context;
-        this.type = type;
-        this.connectorAddress = connectorAddress;
-        this.protocol = protocol;
-        this.connectorId = connectorId;
-        this.providerId = providerId;
-        this.offer = offer;
-    }
+
     @SuppressWarnings("Unused")
     public NegotiationRequest() {
     }

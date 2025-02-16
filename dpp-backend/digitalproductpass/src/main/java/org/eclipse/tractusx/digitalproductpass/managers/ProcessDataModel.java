@@ -75,6 +75,7 @@ public class ProcessDataModel {
      *
      */
     public ProcessDataModel addProcess(Process process){
+        ProcessManager.PROCESS_MAP.put(process.getId(), process);
         this.dataModel.put(process.id, process);
         return this;
     }
@@ -94,13 +95,15 @@ public class ProcessDataModel {
      *
      */
     public ProcessDataModel setState(String processId, String state){
-        Process process = this.dataModel.getOrDefault(processId, null);
+        //Process process = this.dataModel.getOrDefault(processId, null);
+
+        Process process = ProcessManager.PROCESS_MAP.get(processId);
         if(process == null){
             throw new DataModelException(this.getClass().getName(), "The process does not exists!");
         }
         process.state = state;
         process.updated = DateTimeUtil.getTimestamp();
-        this.dataModel.put(processId, process);
+        ProcessManager.PROCESS_MAP.put(processId, process);
         return this;
     }
 
@@ -115,7 +118,8 @@ public class ProcessDataModel {
      *
      */
     public String getState(String processId){
-        return this.dataModel.get(processId).getState();
+        Process process = ProcessManager.PROCESS_MAP.get(processId);
+        return process.getState();
     }
 
     /**
@@ -134,13 +138,14 @@ public class ProcessDataModel {
      */
     public ProcessDataModel startProcess(String processId, Runnable processRunnable){
         try {
-            Process process = this.dataModel.getOrDefault(processId, null);
+            Process process = ProcessManager.PROCESS_MAP.get(processId);
             if (process == null) {
                 throw new DataModelException(this.getClass().getName(), "The process does not exists!");
             }
             process.state = "RUNNING";
             process.thread = ThreadUtil.runThread(processRunnable, processId);
             process.updated = DateTimeUtil.getTimestamp();
+            ProcessManager.PROCESS_MAP.put(processId, process);
             this.dataModel.put(processId, process);
             return this;
         }catch (Exception e){
@@ -159,7 +164,7 @@ public class ProcessDataModel {
      *
      */
     public Process getProcess(String processId){
-        return this.dataModel.getOrDefault(processId, null);
+        return ProcessManager.PROCESS_MAP.get(processId);
     }
 
     /**
@@ -173,7 +178,7 @@ public class ProcessDataModel {
      *
      */
     public Boolean processExists(String processId){
-        return this.dataModel.containsKey(processId);
+        return ProcessManager.PROCESS_MAP.containsKey(processId);
     }
 
 }

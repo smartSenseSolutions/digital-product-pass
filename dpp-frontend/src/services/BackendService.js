@@ -288,7 +288,7 @@ export default class BackendService {
     }
     getHeadersCredentials(authentication) {
         let params = this.getHeaders(authentication);
-        params["withCredentials"] = true;
+       // params["withCredentials"] = true;
         return params;
 
     }

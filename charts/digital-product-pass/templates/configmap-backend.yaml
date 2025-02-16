@@ -79,7 +79,7 @@ data:
         enabled: {{ .Values.backend.irs.enabled }} # -- Enable search for children in the requests
         endpoint: "https://{{ .Values.backend.irs.hostname }}" # -- IRS endpoint
         paths:
-          job: "/irs/jobs" # -- API path for calling in the IRS endpoints and staring/getting jobs
+          job: "irs/jobs" # -- API path for calling in the IRS endpoints and staring/getting jobs
         tree:
           fileName: "treeDataModel" # -- Tree dataModel filename created in the processId directory
           indent: true # -- Indent tree file

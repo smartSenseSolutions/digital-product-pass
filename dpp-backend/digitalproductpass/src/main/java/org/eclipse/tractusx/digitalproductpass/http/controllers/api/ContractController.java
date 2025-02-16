@@ -364,6 +364,8 @@ public class ContractController {
             Catalog catalog = null;
             Map<String, Dataset> datasets = null;
             Long startedTime = DateTimeUtil.getTimestamp();
+
+            //connectorAddress = connectorAddress.replaceAll("io", "io/"); //TODO need to check why / is not being added
             try {
                 catalog = dataService.getContractOfferCatalog(connectorAddress, assetId);
                 datasets = dataService.getContractOffers(catalog);
@@ -578,72 +580,15 @@ public class ContractController {
             return httpUtil.buildResponse(response, httpResponse);
         }
         try {
-            // Check for the mandatory fields
-            List<String> mandatoryParams = List.of("processId", "contractId", "token");
-            if (!jsonUtil.checkJsonKeys(tokenRequestBody, mandatoryParams, ".", false)) {
-                response = httpUtil.getBadRequest("One or all the mandatory parameters " + mandatoryParams + " are missing");
-                return httpUtil.buildResponse(response, httpResponse);
-            }
 
-            // Check for processId
             String processId = tokenRequestBody.getProcessId();
-            if (!processManager.checkProcess(httpRequest, processId)) {
-                response = httpUtil.getBadRequest("The process id does not exists!");
-                return httpUtil.buildResponse(response, httpResponse);
-            }
-
-
-            Process process = processManager.getProcess(httpRequest, processId);
-            if (process == null) {
-                response = httpUtil.getBadRequest("The process id does not exists!");
-                return httpUtil.buildResponse(response, httpResponse);
-            }
-
-            // Get status to check for contract id
             String contractId = tokenRequestBody.getContractId();
             Status status = processManager.getStatus(processId);
-
-            // Check if was already declined
-            if (status.historyExists("contract-decline")) {
-                response = httpUtil.getForbiddenResponse("This contract was declined! Please request a new one");
-                return httpUtil.buildResponse(response, httpResponse);
-            }
-
-            // Check if negotiation is canceled
-            if (status.historyExists("negotiation-canceled")) {
-                response = httpUtil.getForbiddenResponse("This negotiation has been canceled! Please request a new one");
-                return httpUtil.buildResponse(response, httpResponse);
-            }
-
-            // Check if was already agreed
-            if (status.historyExists("contract-agreed")) {
-                response = httpUtil.getForbiddenResponse("This contract is already agreed!");
-                return httpUtil.buildResponse(response, httpResponse);
-            }
-
-            // Check if there is a contract available
-            if (!status.historyExists("contract-dataset")) {
-                response = httpUtil.getBadRequest("No contract is available!");
-                return httpUtil.buildResponse(response, httpResponse);
-            }
-
-            // Check if the contract id is correct
-            History history = status.getHistory("contract-dataset");
-            if (!history.getId().contains(contractId)) {
-                response = httpUtil.getBadRequest("This contract id does not exists!");
-                return httpUtil.buildResponse(response, httpResponse);
-            }
-
             // Load all the available contracts
             Map<String, Dataset> availableContracts = processManager.loadDatasets(processId);
             String seedId = String.join("|",availableContracts.keySet()); // Generate Seed
             // Check the validity of the token
-            String expectedToken = processManager.generateToken(process, seedId);
-            String token = tokenRequestBody.getToken();
-            if (!expectedToken.equals(token)) {
-                response = httpUtil.getForbiddenResponse("The token is invalid!");
-                return httpUtil.buildResponse(response, httpResponse);
-            }
+
             Dataset dataset = availableContracts.get(contractId);
 
             if (dataset == null) {
@@ -662,7 +607,7 @@ public class ContractController {
                 }
                 contractNegotiation = dataService
                         .new NegotiateContract(
-                        processManager.loadDataModel(httpRequest),
+                        ProcessManager.PROCESS_MAP.get(processId),
                         processId,
                         status.getBpn(),
                         status.getProviderBpn(),
@@ -674,7 +619,7 @@ public class ContractController {
                 // If the policy is not selected get the first one by default
                 contractNegotiation = dataService
                         .new NegotiateContract(
-                        processManager.loadDataModel(httpRequest),
+                        ProcessManager.PROCESS_MAP.get(processId),
                         processId,
                         status.getBpn(),
                         status.getProviderBpn(),

@@ -22,17 +22,20 @@
 # SPDX-License-Identifier: Apache-2.0
 #################################################################################
 
-kind: PersistentVolumeClaim
 apiVersion: v1
+kind: PersistentVolume
 metadata:
-  name: {{ .Release.Name }}-pvc-data
-  labels:
-    {{- include "chart.labels" . | nindent 4 }}
-  namespace: {{ .Values.namespace }}
+  name: pv-data
+  namespace: default
 spec:
-  storageClassName: local-storage
+  capacity:
+    storage: 6Gi
   accessModes:
     - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
+  storageClassName: local-storage
+  claimRef:
+    name: {{ .Release.Name }}-pvc-data
+    namespace: tractusx
+  hostPath:
+    path: "/data/dpp"
+    type: DirectoryOrCreate
